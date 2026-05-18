@@ -1,22 +1,10 @@
--- ============================================================================
--- PROJECT: Small Pharmacy Inventory & Prescription System (COMP2082 Final Project)
--- FILE: 03_views.sql
--- DESCRIPTION: High-Value Analytics and Auditing Views.
--- SYNTAX: PostgreSQL 15+ Standard
--- ============================================================================
 
--- Clean up existing views in reverse dependency order
 DROP VIEW IF EXISTS v_supplier_medicine_summary CASCADE;
 DROP VIEW IF EXISTS v_patient_prescription_history CASCADE;
 DROP VIEW IF EXISTS v_pharmacy_sales_summary CASCADE;
 DROP VIEW IF EXISTS v_expiring_medicines CASCADE;
 DROP VIEW IF EXISTS v_low_stock_medicines CASCADE;
 
--- ============================================================================
--- 1. VIEW: v_low_stock_medicines
--- PURPOSE: Real-time dashboard for inventory managers showing medicines that
---          fall below a critical threshold (50 units) across active unexpired batches.
--- ============================================================================
 CREATE VIEW v_low_stock_medicines AS
 SELECT 
     m.id AS medicine_id,
@@ -38,11 +26,6 @@ GROUP BY m.id, m.trade_name, m.generic_name, c.name;
 
 COMMENT ON VIEW v_low_stock_medicines IS 'Real-time alert tracker for depleted and low-stock pharmaceuticals';
 
--- ============================================================================
--- 2. VIEW: v_expiring_medicines
--- PURPOSE: Auditing dashboard displaying batches expiring within 90 days
---          to calculate gross and net wholesale capital risk values.
--- ============================================================================
 CREATE VIEW v_expiring_medicines AS
 SELECT 
     b.id AS batch_id,
@@ -67,11 +50,6 @@ WHERE b.current_quantity > 0
 
 COMMENT ON VIEW v_expiring_medicines IS 'Risk management ledger detailing inventory assets close to expiration';
 
--- ============================================================================
--- 3. VIEW: v_pharmacy_sales_summary
--- PURPOSE: Business Intelligence monthly sales aggregate reporting gross, net,
---          VAT collections, and discount tallies.
--- ============================================================================
 CREATE VIEW v_pharmacy_sales_summary AS
 SELECT 
     TO_CHAR(s.sale_timestamp, 'YYYY-MM') AS sale_month,
@@ -87,11 +65,6 @@ GROUP BY TO_CHAR(s.sale_timestamp, 'YYYY-MM');
 
 COMMENT ON VIEW v_pharmacy_sales_summary IS 'Monthly business intelligence sales, tax, and discount aggregate dashboard';
 
--- ============================================================================
--- 4. VIEW: v_patient_prescription_history
--- PURPOSE: Clinical auditing history detailing what patients have been prescribed,
---          which doctor issued it, and cumulative dispensed amounts.
--- ============================================================================
 CREATE VIEW v_patient_prescription_history AS
 SELECT 
     p.id AS patient_id,
@@ -115,11 +88,6 @@ JOIN doctors d ON rx.doctor_id = d.id;
 
 COMMENT ON VIEW v_patient_prescription_history IS 'Clinical safety audit trace linking patients, doctors, prescriptions, and inventory limits';
 
--- ============================================================================
--- 5. VIEW: v_supplier_medicine_summary
--- PURPOSE: Wholesale procurement dashboard indexing active supplier product variety,
---          average acquisition costs, and total stock provided.
--- ============================================================================
 CREATE VIEW v_supplier_medicine_summary AS
 SELECT 
     s.id AS supplier_id,

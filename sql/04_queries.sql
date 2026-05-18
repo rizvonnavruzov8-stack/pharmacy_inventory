@@ -1,17 +1,4 @@
--- ============================================================================
--- PROJECT: Small Pharmacy Inventory & Prescription System (COMP2082 Final Project)
--- FILE: 04_queries.sql
--- DESCRIPTION: 15 Advanced Analytical Queries for Business Intelligence.
--- SYNTAX: PostgreSQL 15+ Standard
--- ============================================================================
 
--- ============================================================================
--- QUERY 1: Monthly Sales Revenue, VAT, and Discount Analytics
--- PURPOSE: Summarize monthly financial performance (Gross, VAT, Net, Discounts)
---          to analyze growth trends and tax collections over time.
--- SQL CONCEPTS: Common Table Expressions (CTEs), Aggregate Functions (SUM, COUNT),
---               Date Formatting (TO_CHAR), Grouping, and Ordering.
--- ============================================================================
 WITH monthly_metrics AS (
     SELECT 
         TO_CHAR(sale_timestamp, 'YYYY-MM') AS sale_month,
@@ -35,13 +22,6 @@ FROM monthly_metrics
 ORDER BY sale_month DESC;
 
 
--- ============================================================================
--- QUERY 2: Top 10 Best-Selling Medicines by Volume and Net Profit
--- PURPOSE: Identify which pharmaceutical products generate the highest unit volume
---          and net profit margins to optimize stock levels and shelf layout.
--- SQL CONCEPTS: Multi-Table INNER JOINs, Aggregate Math, Aliasing,
---               Grouping, Sorting, and Result Limits.
--- ============================================================================
 SELECT 
     m.trade_name,
     m.generic_name,
@@ -60,13 +40,6 @@ ORDER BY net_profit_kgs DESC
 LIMIT 10;
 
 
--- ============================================================================
--- QUERY 3: Low Stock Alerts and Reorder Status
--- PURPOSE: Identify medicines where total stock across all active batches falls
---          below a critical threshold (50 units) and calculate reorder sizes.
--- SQL CONCEPTS: SUM Aggregation, Grouping, CASE WHEN Conditional Logic,
---               COALESCE Handling, and HAVING Filtering.
--- ============================================================================
 SELECT 
     m.id AS medicine_id,
     m.trade_name,
@@ -86,13 +59,6 @@ HAVING COALESCE(SUM(b.current_quantity), 0) < 50
 ORDER BY total_units_in_stock ASC;
 
 
--- ============================================================================
--- QUERY 4: Soon-to-Expire Inventory Dead-Stock Risk Forecast
--- PURPOSE: Audit batches expiring within 90 days to implement markdown clearances
---          and prevent total loss on expiring assets.
--- SQL CONCEPTS: Date Comparisons, Intervals, Aggregate Calculations,
---               Conditional String Tiers, and Multi-Table Joins.
--- ============================================================================
 SELECT 
     b.batch_number,
     m.trade_name,
@@ -115,13 +81,6 @@ WHERE b.current_quantity > 0
 ORDER BY b.expiry_date ASC;
 
 
--- ============================================================================
--- QUERY 5: Supplier Product Variety and Wholesale Contribution Index
--- PURPOSE: Find suppliers providing the widest therapeutic variety and calculate
---          our cumulative wholesale acquisition spending with them.
--- SQL CONCEPTS: COUNT(DISTINCT) Unique tallies, SUM Aggregations, Grouping,
---               HAVING filter, and Multi-Table Joins.
--- ============================================================================
 SELECT 
     s.id AS supplier_id,
     s.name AS supplier_name,
@@ -138,13 +97,6 @@ HAVING COUNT(DISTINCT m.id) > 2
 ORDER BY unique_medicines_supplied DESC;
 
 
--- ============================================================================
--- QUERY 6: Patients with the Highest Volume of Issued Prescriptions
--- PURPOSE: Identify chronic patients relying heavily on prescription medicines
---          to establish wellness programs and coordinate repeat checkouts.
--- SQL CONCEPTS: Multi-Table JOINs (Patients, Prescriptions, items), Count,
---               Sum Aggregations, Grouping, and Ordering.
--- ============================================================================
 SELECT 
     p.id AS patient_id,
     p.first_name || ' ' || p.last_name AS patient_name,
@@ -162,13 +114,6 @@ ORDER BY total_prescriptions_written DESC
 LIMIT 10;
 
 
--- ============================================================================
--- QUERY 7: Dead Stock Audit - Medicines Never Sold
--- PURPOSE: Identify completely inactive medicines that have never recorded a single
---          sale to discontinue ordering them and reclaim shelf space.
--- SQL CONCEPTS: NOT EXISTS Correlated Subquery, LEFT JOIN Anti-Pattern,
---               and View Reference.
--- ============================================================================
 SELECT 
     m.id AS medicine_id,
     m.trade_name,
@@ -186,23 +131,13 @@ WHERE NOT EXISTS (
 ORDER BY c.name, m.trade_name;
 
 
--- ============================================================================
--- QUERY 8: Average Prescribed and Dispensed Financial Value of Prescriptions
--- PURPOSE: Determine the average monetary value of prescriptions written compared
---          to what patients actually chose to buy (dispensed value).
--- SQL CONCEPTS: Layered Common Table Expressions (CTEs), Subtotals,
---               Average aggregate functions.
--- ============================================================================
 WITH rx_monetary_values AS (
     SELECT 
         ri.prescription_id,
-        -- Calculate retail value of prescribed amounts based on current batch price
         SUM(ri.prescribed_qty * b.selling_price) AS prescribed_value_kgs,
-        -- Calculate actual retail value of what has been dispensed so far
         SUM(ri.dispensed_qty * b.selling_price) AS dispensed_value_kgs
     FROM prescription_items ri
     JOIN medicines m ON ri.medicine_id = m.id
-    -- Join onto active batch to get current shelf rate
     LEFT JOIN LATERAL (
         SELECT selling_price FROM batches 
         WHERE medicine_id = m.id 
@@ -219,13 +154,6 @@ SELECT
 FROM rx_monetary_values;
 
 
--- ============================================================================
--- QUERY 9: Peak Sales Hour and Day Analysis
--- PURPOSE: Analyze transaction volume by hour and day of week to optimize
---          pharmacist scheduling and cash drawer pickups.
--- SQL CONCEPTS: Date Extractions (EXTRACT DOW and HOUR), COUNT aggregates,
---               Groupings, and Double-Sort ordering.
--- ============================================================================
 SELECT 
     CASE EXTRACT(ISODOW FROM sale_timestamp)
         WHEN 1 THEN 'Monday (Дүйшөмбү)'
@@ -246,23 +174,13 @@ ORDER BY total_transactions DESC, hour_of_day ASC
 LIMIT 12;
 
 
--- ============================================================================
--- QUERY 10: Running Total of Revenue and Cashier Checkout Contribution Share
--- PURPOSE: Track daily cumulative net revenue chronologically and evaluate
---          each cashier's performance share relative to company totals.
--- SQL CONCEPTS: Window Aggregate Functions (SUM() OVER), Running partition overlays,
---               Transaction timestamps, and percentages.
--- ============================================================================
 SELECT 
     s.id AS sale_id,
     s.sale_timestamp,
     e.first_name || ' ' || e.last_name AS pharmacist_name,
     s.total_net AS sale_net_kgs,
-    -- Running total across all historical time
     ROUND(SUM(s.total_net) OVER (ORDER BY s.sale_timestamp ASC), 2) AS cumulative_running_total_kgs,
-    -- running total partitioned by individual cashier
     ROUND(SUM(s.total_net) OVER (PARTITION BY e.id ORDER BY s.sale_timestamp ASC), 2) AS cashier_running_total_kgs,
-    -- Pharmacist percentage contribution relative to gross company revenues
     ROUND((s.total_net / NULLIF(SUM(s.total_net) OVER (), 0)) * 100, 4) AS percentage_of_company_total
 FROM sales s
 JOIN employees e ON s.employee_id = e.id
@@ -270,13 +188,6 @@ ORDER BY s.sale_timestamp ASC
 LIMIT 15;
 
 
--- ============================================================================
--- QUERY 11: Dense Ranking of Medicines Within Categories by Unit Sales
--- PURPOSE: Rank products within their therapeutic categories to pinpoint bestsellers
---          and underperformers in each drug class.
--- SQL CONCEPTS: Window Ranking Functions (DENSE_RANK() OVER), Partition overlays,
---               CTEs, Multi-Table Joins, and aggregations.
--- ============================================================================
 WITH category_sales AS (
     SELECT 
         c.name AS category_name,
@@ -301,13 +212,6 @@ FROM category_sales
 ORDER BY category_name ASC, ranking_in_category ASC;
 
 
--- ============================================================================
--- QUERY 12: Super-Prescribers - Doctors Writing High Volumes of Prescriptions
--- PURPOSE: Identify doctors who write the most clinical scripts to establish
---          pharmacy relationship outreach and coordinate inventory supplies.
--- SQL CONCEPTS: JOINs, Count Aggregations, Grouping, HAVING filters,
---               and Sorting.
--- ============================================================================
 SELECT 
     d.id AS doctor_id,
     d.first_name || ' ' || d.last_name AS doctor_name,
@@ -324,12 +228,6 @@ HAVING COUNT(r.id) >= 5
 ORDER BY total_prescriptions_issued DESC;
 
 
--- ============================================================================
--- QUERY 13: Over-The-Counter (OTC) vs. Prescription Sales Revenue Split
--- PURPOSE: Calculate the net financial share of OTC checkouts versus prescription-
---          linked drug checkouts to evaluate business dependency.
--- SQL CONCEPTS: Subqueries, Conditional aggregation sums, Ratio and percentage math.
--- ============================================================================
 SELECT 
     COUNT(id) AS total_receipts,
     SUM(CASE WHEN prescription_id IS NOT NULL THEN 1 ELSE 0 END) AS prescription_sale_count,
@@ -343,12 +241,6 @@ SELECT
 FROM sales;
 
 
--- ============================================================================
--- QUERY 14: Comprehensive Active Inventory Batch Listing (Using View)
--- PURPOSE: Query the active inventory view for live checkout searches,
---          cross-referencing categories and stock flags.
--- SQL CONCEPTS: VIEW selection, Nested ordering, Where clauses.
--- ============================================================================
 SELECT 
     trade_name,
     generic_name,
@@ -361,20 +253,12 @@ WHERE total_available_stock > 10
 ORDER BY trade_name ASC, nearest_expiry_date ASC;
 
 
--- ============================================================================
--- QUERY 15: Inventory Waste and Adjustment Loss Summary
--- PURPOSE: Quantify manual inventory adjustments (wastage, theft, breakage)
---          by type to calculate exact financial asset losses.
--- SQL CONCEPTS: CASE WHEN calculations, JOINs (batches, medicines), Sums,
---               Groupings, and sorting.
--- ============================================================================
 SELECT 
     ia.adjustment_type,
     COUNT(ia.id) AS total_adjustment_events,
     SUM(CASE WHEN ia.quantity < 0 THEN ia.quantity ELSE 0 END) AS units_removed,
     SUM(CASE WHEN ia.quantity > 0 THEN ia.quantity ELSE 0 END) AS units_added,
     SUM(ia.quantity) AS net_unit_change,
-    -- Financial audit value based on wholesale purchase cost
     ROUND(SUM(ABS(ia.quantity) * b.purchase_price), 2) AS gross_audit_impact_kgs,
     ROUND(SUM(ia.quantity * b.purchase_price), 2) AS net_financial_impact_kgs
 FROM inventory_adjustments ia

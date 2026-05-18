@@ -1,11 +1,4 @@
--- ============================================================================
--- PROJECT: Small Pharmacy Inventory & Prescription System (COMP2082 Final Project)
--- FILE: 01_schema.sql
--- DESCRIPTION: Core Relational Schema, Domains, Constraints, and Indexes.
--- SYNTAX: PostgreSQL 15+ Standard
--- ============================================================================
 
--- Clean up existing tables and custom types in reverse dependency order
 DROP TABLE IF EXISTS inventory_adjustments CASCADE;
 DROP TABLE IF EXISTS sale_items CASCADE;
 DROP TABLE IF EXISTS sales CASCADE;
@@ -25,9 +18,6 @@ DROP TYPE IF EXISTS adjustment_type CASCADE;
 DROP TYPE IF EXISTS prescription_status CASCADE;
 DROP TYPE IF EXISTS biological_gender CASCADE;
 
--- ============================================================================
--- 1. NATIVE ENUM DEFINITIONS
--- ============================================================================
 
 CREATE TYPE employee_role AS ENUM ('pharmacist', 'manager', 'admin');
 CREATE TYPE payment_method AS ENUM ('cash', 'card', 'mobile_qr');
@@ -35,11 +25,7 @@ CREATE TYPE adjustment_type AS ENUM ('breakage', 'spoilage', 'theft', 'reconcili
 CREATE TYPE prescription_status AS ENUM ('pending', 'partially_filled', 'filled', 'expired');
 CREATE TYPE biological_gender AS ENUM ('M', 'F');
 
--- ============================================================================
--- 2. DDL TABLE DEFINITIONS WITH CONTEMPORARY IDENTITY DEFINITIONS
--- ============================================================================
 
--- 2.1 Category Hierarchy (Recursive Self-Reference)
 CREATE TABLE categories (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
@@ -52,7 +38,6 @@ CREATE TABLE categories (
 COMMENT ON TABLE categories IS 'Hierarchical classifications for pharmaceuticals (e.g. Antibiotics -> Penicillins)';
 COMMENT ON COLUMN categories.parent_category_id IS 'Self-referencing foreign key creating a category hierarchy tree';
 
--- 2.2 Medicine Master Directory
 CREATE TABLE medicines (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     trade_name VARCHAR(150) NOT NULL UNIQUE,
@@ -69,7 +54,6 @@ COMMENT ON TABLE medicines IS 'Master catalogue of medicines registered in the s
 COMMENT ON COLUMN medicines.generic_name IS 'International Nonproprietary Name (INN) representing the active chemical agent';
 COMMENT ON COLUMN medicines.prescription_required IS 'System flag forcing pharmacist to scan a valid doctor prescription';
 
--- 2.3 Suppliers Table
 CREATE TABLE suppliers (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name VARCHAR(150) NOT NULL UNIQUE,
@@ -85,7 +69,6 @@ CREATE TABLE suppliers (
 COMMENT ON TABLE suppliers IS 'Wholesale pharmaceutical distributors supplying inventory stocks';
 COMMENT ON COLUMN suppliers.tin_inn IS 'Standard 14-digit corporate or personal Tax Identification Number in Kyrgyzstan';
 
--- 2.4 Patients Directory
 CREATE TABLE patients (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     first_name VARCHAR(100) NOT NULL,
@@ -103,7 +86,6 @@ CREATE TABLE patients (
 COMMENT ON TABLE patients IS 'Patient registry containing biological and standard identifier records';
 COMMENT ON COLUMN patients.pin_inn IS 'Mandatory 14-digit Personal Identification Number on Kyrgyz ID cards';
 
--- 2.5 Doctors Registry
 CREATE TABLE doctors (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     first_name VARCHAR(100) NOT NULL,
@@ -117,7 +99,6 @@ CREATE TABLE doctors (
 COMMENT ON TABLE doctors IS 'Clinicians and licensed practitioners authorized to prescribe regulated drugs';
 COMMENT ON COLUMN doctors.license_number IS 'Official Ministry of Health (MoH) professional medical license index';
 
--- 2.6 Pharmacy Employees Registry
 CREATE TABLE employees (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     first_name VARCHAR(100) NOT NULL,
@@ -132,7 +113,6 @@ CREATE TABLE employees (
 
 COMMENT ON TABLE employees IS 'Pharmacy staff member registry with mapped system access roles';
 
--- 2.7 Medicine Inventory Batches
 CREATE TABLE batches (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     medicine_id INT NOT NULL,
@@ -160,7 +140,6 @@ COMMENT ON TABLE batches IS 'Physical blocks of medicine in inventory, tracking 
 COMMENT ON COLUMN batches.batch_number IS 'Manufacturer physical print batch number';
 COMMENT ON COLUMN batches.selling_price IS 'Retail customer shelf price. Must be higher than wholesale purchase price to verify margins';
 
--- 2.8 Prescriptions Registry
 CREATE TABLE prescriptions (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     patient_id INT NOT NULL,
@@ -179,7 +158,6 @@ CREATE TABLE prescriptions (
 COMMENT ON TABLE prescriptions IS 'Medical prescriptions issued to patients by registered doctors';
 COMMENT ON COLUMN prescriptions.serial_number IS 'Unique serialized barcode index printed on paper slip or QR code';
 
--- 2.9 Prescription Items (Junction Table: M:N)
 CREATE TABLE prescription_items (
     prescription_id INT NOT NULL,
     medicine_id INT NOT NULL,
@@ -197,7 +175,6 @@ CREATE TABLE prescription_items (
 
 COMMENT ON TABLE prescription_items IS 'Junction catalog connecting prescriptions to specific medicines with authorized quantities';
 
--- 2.10 Sales Transaction Header
 CREATE TABLE sales (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     employee_id INT NOT NULL,
@@ -222,7 +199,6 @@ COMMENT ON TABLE sales IS 'Sales receipt summaries and cumulative financial tax 
 COMMENT ON COLUMN sales.prescription_id IS 'Optional link to a prescription if checkout includes prescription-only medication';
 COMMENT ON COLUMN sales.tax_amount IS 'Calculated 12% standard Kyrgyzstan VAT included in total_gross';
 
--- 2.11 Sale Items (Junction Table: M:N)
 CREATE TABLE sale_items (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     sale_id INT NOT NULL,
@@ -242,7 +218,6 @@ CREATE TABLE sale_items (
 
 COMMENT ON TABLE sale_items IS 'Junction catalog capturing transaction details of items checked out';
 
--- 2.12 Inventory Adjustments
 CREATE TABLE inventory_adjustments (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     batch_id INT NOT NULL,
@@ -259,29 +234,16 @@ CREATE TABLE inventory_adjustments (
 
 COMMENT ON TABLE inventory_adjustments IS 'Audit ledger containing manual batch stock delta adjustments (wastage, theft, counts)';
 
--- ============================================================================
--- 3. SCHEMA PERFORMANCE INDEX STRUCTURES
--- ============================================================================
 
--- 3.1 Prescription Index
--- Optimizes patient history search and single-prescription serial validation
 CREATE INDEX idx_prescriptions_lookup 
 ON prescriptions (serial_number, patient_id);
 
--- 3.2 Sales Index
--- Optimizes historical daily reporting and employee processing checks
 CREATE INDEX idx_sales_reporting 
 ON sales (sale_timestamp, employee_id);
 
--- 3.3 Expiry & Inventory Tracking (Partial Indexing)
--- B-Tree Index tailored specifically for expiring batch alerts. Excluding 
--- completely depleted batches (current_quantity = 0) reduces index footprint 
--- and speeds up FIFO inventory lookups at checkout.
 CREATE INDEX idx_batches_expiry_tracking 
 ON batches (expiry_date, medicine_id) 
 WHERE (current_quantity > 0);
 
--- 3.4 Medicine Lookup Index
--- Optimizes textual trade and generic name lookups during drug dispensation
 CREATE INDEX idx_medicines_search 
 ON medicines (trade_name, generic_name);

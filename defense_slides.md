@@ -2,8 +2,8 @@
 ## DESIGN & IMPLEMENTATION OF A HIGH-FIDELITY PHARMACY INVENTORY & PRESCRIPTION COMPLIANCE DATABASE SYSTEM IN THE KYRGYZ REPUBLIC
 
 ### COMP2082: Advanced Relational Databases & DBMS Architectures
-**Presenters**: USIT Advanced DBMS Design Lab  
-**Academic Advisor**: Prof. Ruslan Aliev, PhD  
+**Presenter**: Rizvon Navruzov  
+**Academic Advisor**: Nurlan Shaidullaev  
 
 ---
 

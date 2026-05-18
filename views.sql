@@ -1,18 +1,8 @@
--- ============================================================================
--- PROJECT: Small Pharmacy Inventory & Prescription System (COMP2082 Final Project)
--- FILE: views.sql
--- DESCRIPTION: High-Performance Database Views for Frontend and Analytics.
--- ============================================================================
 
 DROP VIEW IF EXISTS v_sales_dashboard CASCADE;
 DROP VIEW IF EXISTS v_expired_or_near_expiry CASCADE;
 DROP VIEW IF EXISTS v_active_inventory CASCADE;
 
--- ============================================================================
--- 1. VIEW: v_active_inventory (Pharmacist Quick-Search Interface)
--- ============================================================================
--- Aggregates current available stock across all unexpired batches, providing 
--- prices and nearest expiry schedules in real-time.
 CREATE OR REPLACE VIEW v_active_inventory AS
 SELECT 
     m.id AS medicine_id,
@@ -34,11 +24,6 @@ WHERE m.is_active = TRUE
 GROUP BY m.id, m.trade_name, m.generic_name, c.name, m.prescription_required;
 
 
--- ============================================================================
--- 2. VIEW: v_expired_or_near_expiry (Manager Inventory Warning System)
--- ============================================================================
--- Identifies batches that have expired or are set to expire within 90 days.
--- Enables managers to plan discount promotions or schedule supplier returns.
 CREATE OR REPLACE VIEW v_expired_or_near_expiry AS
 SELECT 
     b.id AS batch_id,
@@ -65,11 +50,6 @@ WHERE b.current_quantity > 0
 ORDER BY b.expiry_date ASC;
 
 
--- ============================================================================
--- 3. VIEW: v_sales_dashboard (Management Analytics Dashboard)
--- ============================================================================
--- Combines transaction records, sales items, VAT tax metrics, and patient details
--- into a single source of truth for business intelligence reports.
 CREATE OR REPLACE VIEW v_sales_dashboard AS
 SELECT 
     s.id AS sale_id,

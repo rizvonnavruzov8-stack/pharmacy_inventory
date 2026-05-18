@@ -11,8 +11,8 @@
 ---
 
 **Semester**: Spring 2026  
-**Project Group**: USIT Advanced DBMS Design Lab  
-**Academic Instructor**: Prof. Ruslan Aliev, PhD  
+**Student Name**: Rizvon Navruzov  
+**Academic Instructor**: Nurlan Shaidullaev  
 
 ---
 
