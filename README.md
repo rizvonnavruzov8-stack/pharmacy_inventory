@@ -5,6 +5,21 @@ A production-grade, highly optimized PostgreSQL 15+ database architecture for co
 
 ---
 
+## 📂 Submission Package Structure
+
+This project has been structured for academic submission with all database scripts organized within the `sql/` directory:
+
+*   `sql/01_schema.sql` (Core database schema, domains, and check constraints)
+*   `sql/02_seed_data.sql` (Programmatic Kyrgyzstan-context seed dataset)
+*   `sql/03_views.sql` (Operational reporting views)
+*   `sql/04_queries.sql` (15 analytical business intelligence queries)
+*   `sql/05_roles.sql` (Least-privilege RBAC role configurations)
+*   `sql/06_transactions.sql` (ACID transaction execution models)
+*   `sql/triggers.sql` (Inventory deduction and prescription validation triggers)
+*   `sql/views.sql` (Frontend operational search views)
+
+---
+
 ## 🛠️ Tech Stack & Requirements
 - **DBMS**: PostgreSQL 15+ (tested on PostgreSQL 18.3)
 - **Currency**: Kyrgyz Som (`KGS`)
@@ -43,25 +58,28 @@ Run the scripts in the following order using `psql` to guarantee that all depend
 
 ```bash
 # 1. Execute Core Relational Layout
-psql -d pharmacy_db -f 01_schema.sql
+psql -d pharmacy_db -f sql/01_schema.sql
 
-# 2. Deploy Automated Trigger Validations
-psql -d pharmacy_db -f triggers.sql
+# 2a. Deploy Automated Trigger Validations
+psql -d pharmacy_db -f sql/triggers.sql
+
+# 2b. Deploy Front-End Search Views
+psql -d pharmacy_db -f sql/views.sql
 
 # 3. Create Operational Reporting Views
-psql -d pharmacy_db -f 03_views.sql
+psql -d pharmacy_db -f sql/03_views.sql
 
 # 4. Configure RBAC Group Permissions & Schema Privileges
-psql -d pharmacy_db -f 05_roles.sql
+psql -d pharmacy_db -f sql/05_roles.sql
 
 # 5. Populate Database with 3,000+ logically consistent records
-psql -d pharmacy_db -f 02_seed_data.sql
+psql -d pharmacy_db -f sql/02_seed_data.sql
 
 # 6. Run Advanced Business Intelligence Queries
-psql -d pharmacy_db -f 04_queries.sql
+psql -d pharmacy_db -f sql/04_queries.sql
 
 # 7. Execute ACID Transaction Models & Verification Checks
-psql -d pharmacy_db -f 06_transactions.sql
+psql -d pharmacy_db -f sql/06_transactions.sql
 ```
 
 ---
@@ -74,24 +92,15 @@ psql -d pharmacy_db -f 06_transactions.sql
 
 ---
 
-## 📊 Backup and Restore Guide
+## Creating the Database Backup
 
-### To Back up your Database:
-Use `pg_dump` to export the schema and data to a backup file:
+To back up your database, run the following exact command:
 ```bash
 pg_dump -U postgres -d pharmacy_db -F c -b -v -f pharmacy_db_backup.dump
 ```
 
-### To Restore your Database:
-If your database is corrupted or you need to recreate it:
+To restore your database, run the following exact command:
 ```bash
-# Drop the existing database
-psql -U postgres -c "DROP DATABASE IF EXISTS pharmacy_db WITH (FORCE);"
-
-# Recreate the blank database
-psql -U postgres -c "CREATE DATABASE pharmacy_db;"
-
-# Restore the dump using pg_restore
 pg_restore -U postgres -d pharmacy_db -v pharmacy_db_backup.dump
 ```
 

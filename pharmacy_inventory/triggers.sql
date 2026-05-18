@@ -25,6 +25,7 @@ DECLARE
     v_expiry_date DATE;
     v_selling_price NUMERIC(12, 2);
     v_med_name VARCHAR(150);
+    v_sale_date DATE;
 BEGIN
     -- Fetch batch inventory details with row locking to prevent race conditions
     SELECT b.current_quantity, b.expiry_date, b.selling_price, m.trade_name
@@ -39,8 +40,11 @@ BEGIN
         RAISE EXCEPTION 'Inventory Error: Batch ID % does not exist.', NEW.batch_id;
     END IF;
 
-    -- Assertion: Check for batch expiration
-    IF v_expiry_date <= CURRENT_DATE THEN
+    -- Fetch the sale's timestamp to support historical transactions and backdated seed data
+    SELECT sale_timestamp::date INTO v_sale_date FROM sales WHERE id = NEW.sale_id;
+
+    -- Assertion: Check for batch expiration (based on transaction date)
+    IF v_expiry_date <= COALESCE(v_sale_date, CURRENT_DATE) THEN
         RAISE EXCEPTION 'Safety Violation: Cannot sell expired medication. Batch % for "%" expired on %.', 
             NEW.batch_id, v_med_name, v_expiry_date;
     END IF;
@@ -89,6 +93,7 @@ DECLARE
     v_remaining_qty INT;
     v_total_prescribed_items INT;
     v_fully_dispensed_items INT;
+    v_sale_date DATE;
 BEGIN
     -- 1. Identify the medicine and whether it requires a prescription
     SELECT b.medicine_id, m.trade_name, m.prescription_required
@@ -97,8 +102,11 @@ BEGIN
     JOIN medicines m ON b.medicine_id = m.id
     WHERE b.id = NEW.batch_id;
 
-    -- 2. Get prescription_id of the parent sale transaction
-    SELECT prescription_id INTO v_prescription_id FROM sales WHERE id = NEW.sale_id;
+    -- 2. Get prescription_id and sale_timestamp of the parent sale transaction
+    SELECT prescription_id, sale_timestamp::date 
+    INTO v_prescription_id, v_sale_date 
+    FROM sales 
+    WHERE id = NEW.sale_id;
 
     -- 3. Perform validations if the medicine is prescription-only
     IF v_rx_required THEN
@@ -113,8 +121,8 @@ BEGIN
         FROM prescriptions 
         WHERE id = v_prescription_id;
 
-        -- Assertion: Check if prescription has expired
-        IF v_rx_expiry < CURRENT_DATE THEN
+        -- Assertion: Check if prescription has expired (based on transaction date)
+        IF v_rx_expiry < COALESCE(v_sale_date, CURRENT_DATE) THEN
             RAISE EXCEPTION 'Prescription Violation: Prescription serial % expired on %.', 
                 v_rx_serial, v_rx_expiry;
         END IF;
