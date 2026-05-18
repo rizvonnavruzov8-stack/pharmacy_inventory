@@ -352,14 +352,13 @@ FROM sales;
 SELECT 
     trade_name,
     generic_name,
-    batch_number,
-    current_quantity AS items_on_shelf,
-    selling_price AS shelf_price_kgs,
-    expiry_date,
+    nearest_expiry_date,
+    total_available_stock AS items_on_shelf,
+    min_selling_price_kgs AS shelf_price_kgs,
     prescription_required
 FROM v_active_inventory
-WHERE current_quantity > 10
-ORDER BY trade_name ASC, expiry_date ASC;
+WHERE total_available_stock > 10
+ORDER BY trade_name ASC, nearest_expiry_date ASC;
 
 
 -- ============================================================================

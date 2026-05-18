@@ -45,8 +45,11 @@ Run the scripts in the following order using `psql` to guarantee that all depend
 # 1. Execute Core Relational Layout
 psql -d pharmacy_db -f 01_schema.sql
 
-# 2. Deploy Automated Trigger Validations
+# 2a. Deploy Automated Trigger Validations
 psql -d pharmacy_db -f triggers.sql
+
+# 2b. Deploy Front-End Search Views
+psql -d pharmacy_db -f views.sql
 
 # 3. Create Operational Reporting Views
 psql -d pharmacy_db -f 03_views.sql

@@ -13,7 +13,7 @@ BEGIN;
 -- Triggers will remain fully ENABLED to demonstrate that our database validation engine 
 -- automatically handles inventory deductions, prescription audits, and billing math!
 
-RAISE NOTICE '--- Starting Algorithmic Seed Data Generation (Kyrgyzstan Context) ---';
+DO $$ BEGIN RAISE NOTICE '--- Starting Algorithmic Seed Data Generation (Kyrgyzstan Context) ---'; END $$;
 
 -- ============================================================================
 -- 1. SEED: categories (Recursive Self-Reference Hierarchy)
@@ -268,7 +268,7 @@ BEGIN
             -- Non-uniform status distribution
             IF (i % 5) = 0 THEN
                 v_status := 'filled'::prescription_status;
-            ELIF (i % 7) = 0 THEN
+            ELSIF (i % 7) = 0 THEN
                 v_status := 'partially_filled'::prescription_status;
             ELSE
                 v_status := 'pending'::prescription_status;
@@ -316,7 +316,7 @@ BEGIN
         IF v_rx_status = 'filled' THEN
             v_disp1 := v_qty1;
             v_disp2 := v_qty2;
-        ELIF v_rx_status = 'partially_filled' THEN
+        ELSIF v_rx_status = 'partially_filled' THEN
             v_disp1 := v_qty1 / 2;
             v_disp2 := 0;
         ELSE
@@ -356,7 +356,7 @@ BEGIN
         -- Payment method
         IF (i % 3) = 0 THEN
             v_pay_method := 'mobile_qr'::payment_method;
-        ELIF (i % 3) = 1 THEN
+        ELSIF (i % 3) = 1 THEN
             v_pay_method := 'card'::payment_method;
         ELSE
             v_pay_method := 'cash'::payment_method;
@@ -365,7 +365,7 @@ BEGIN
         -- Discount
         IF (i % 10) = 0 THEN
             v_discount := 15.00;
-        ELIF (i % 15) = 0 THEN
+        ELSIF (i % 15) = 0 THEN
             v_discount := 30.00;
         ELSE
             v_discount := 0.00;
@@ -465,4 +465,4 @@ INSERT INTO inventory_adjustments (batch_id, employee_id, quantity, adjustment_t
 -- Complete transaction
 COMMIT;
 
-RAISE NOTICE '--- [SUCCESS]: Algorithmic Database Seeding Completed Flawlessly! ---';
+DO $$ BEGIN RAISE NOTICE '--- [SUCCESS]: Algorithmic Database Seeding Completed Flawlessly! ---'; END $$;
